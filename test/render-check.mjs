@@ -133,7 +133,7 @@ for (const must of ['鲸友', '小鲸测试机', 'K7M2QX', '我的好友码', '�
   if (!state.panelText.includes(must)) failures.push('panel text missing: ' + must)
 }
 // 好友申请系统：待处理 + 已发出两块都要出现
-for (const must of ['好友请求', '同意', '拒绝', '已发出的申请', '撤回']) {
+for (const must of ['有人想加你', '同意', '拒绝', '已发出的申请', '撤回']) {
   if (!state.panelText.includes(must)) failures.push('friend-request UI missing: ' + must)
 }
 // 好友码必须作为可见文本出现在面板里（曾经只是个小徽章，用户看不见）
