@@ -2,12 +2,16 @@
   "screenshots": [
     {
       "path": "assets/screenshots/panel-dark.png",
-      "alt": "鲸友面板（深色主题）：资料卡、好友码、待处理好友申请、已发出申请与好友列表",
+      "alt": "鲸友面板（深色）：资料卡、好友码、待处理好友申请、好友列表与在线状态",
       "primary": true
     },
     {
+      "path": "assets/screenshots/chat-dark.png",
+      "alt": "与好友的会话：文字消息、文件分享卡片、插件分享卡片与输入框"
+    },
+    {
       "path": "assets/screenshots/panel-light.png",
-      "alt": "鲸友面板（浅色主题）：同一面板在浅色模式下的样子"
+      "alt": "鲸友面板（浅色）：同一面板在浅色模式下的样子"
     }
   ]
 }

@@ -101,6 +101,13 @@ window.fetch = async (url, opts = {}) => {
     window.__postLog.push({ url, body })
   }
   if (url.endsWith('/dsh-friends/state')) return { ok: true, json: async () => mockProfile }
+  if (url.endsWith('/dsh-friends/installed')) {
+    return { ok: true, json: async () => ({ plugins: [
+      { name: 'dsh-friends', version: '0.4.0' },
+      { name: 'dsh-whale-widget', version: '0.4.2' },
+      { name: 'dsh-wsl-tool', version: '1.12.8' },
+    ] }) }
+  }
   if (url.endsWith('/dsh-friends/profile') && opts.method === 'POST') {
     Object.assign(mockProfile, JSON.parse(opts.body))
     return { ok: true, json: async () => ({ ok: true }) }
@@ -120,6 +127,21 @@ window.__seedLive = (store) => {
   seed('QQQ888', { online: true, status: 'online', nickname: '深夜赶稿人', signature: '凌晨三点的 DSH 最好用', mood: '🌙', lastSeen: Date.now() })
   seed('M4K8PD', { online: true, status: 'error', label: '构建挂了', nickname: '隔壁工位', signature: '谁来救救我', mood: '😵', lastSeen: Date.now() })
   seed('ZZZ999', { online: false, nickname: 'ZZZ999', lastSeen: Date.now() - 3600000 * 2 })
+}
+
+// 预置一段会话，用于验证聊天视图（?chat=CODE 时直线打开会话）
+window.__seedThread = (code) => {
+  const key = 'dshf-thread-' + String(code).toUpperCase()
+  if (localStorage.getItem(key)) return
+  const now = Date.now()
+  const list = [
+    { msgId: 'a1', direction: 'in', kind: 'chat', text: '你那边的插件跑起来了吗？', ts: now - 600000 },
+    { msgId: 'a2', direction: 'out', kind: 'chat', text: '跑了，申请流程也通了', ts: now - 540000 },
+    { msgId: 'a3', direction: 'in', kind: 'file', file: { name: '重构方案.md', size: 2048, mime: 'text/markdown' }, data: 'aGVsbG8=', ts: now - 420000, unread: true },
+    { msgId: 'a4', direction: 'in', kind: 'chat', text: '顺便把这个插件发你了', ts: now - 300000, unread: true },
+    { msgId: 'a5', direction: 'in', kind: 'plugin', plugin: { name: 'dsh-wsl-tool', version: '1.12.8' }, ts: now - 240000, unread: true },
+  ]
+  localStorage.setItem(key, JSON.stringify(list))
 }
 
 // ---- 假 __ModuleLoader__ ----
@@ -209,12 +231,22 @@ const fakeCtx = {
   // 持续把在线好友状态灌进实时层（截图/渲染验证用）。
   // 之所以持续而不是只灌一次：store.init 的异步 reconcile 与面板重挂都可能替换
   // friends Map 里的对象，只灌一次会被后来者覆盖。真实连通性由 relay.test.mjs 覆盖。
+  // ?chat=CODE 时预置并打开一段会话，用来验证聊天视图。
+  const chatCode = new URLSearchParams(location.search).get('chat')
   let seeded = false
   const seedTimer = setInterval(() => {
     const store = window.__dshfStore
     if (store && store.state && store.state.me && store.state.friends.size >= 4) {
       window.__seedLive(store)
-      if (!seeded) { seeded = true; log('seed: live states injected') }
+      if (!seeded) {
+        seeded = true
+        log('seed: live states injected')
+        if (chatCode) {
+          window.__seedThread(chatCode)
+          store.openChat(chatCode)
+          log('seed: opened chat with ' + chatCode)
+        }
+      }
     }
   }, 250)
 </script>

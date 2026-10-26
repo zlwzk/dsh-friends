@@ -64,11 +64,16 @@ async function callRoute(routes, path, { method = 'GET', body } = {}) {
   return { status: response.statusCode, json: () => JSON.parse(response.payload || '{}'), raw: response.payload }
 }
 
-test('mount registers four tools and three routes', () => {
+test('mount registers four tools and four routes', () => {
   const { routes, tools, dispose } = mountHost()
   const names = tools.map((t) => t.name).sort()
   assert.deepEqual(names, ['friend_inbox', 'friend_profile', 'friend_sign_idea', 'friend_task'])
-  assert.deepEqual([...routes.keys()].sort(), ['/dsh-friends/friends', '/dsh-friends/profile', '/dsh-friends/state'])
+  assert.deepEqual([...routes.keys()].sort(), [
+    '/dsh-friends/friends',
+    '/dsh-friends/installed',
+    '/dsh-friends/profile',
+    '/dsh-friends/state',
+  ])
   assert.equal(typeof dispose, 'function')
   dispose()
 })
@@ -284,4 +289,19 @@ test('friend_inbox tool summarises pending requests', async () => {
   assert.match(r.summary, /阿改/)
   assert.match(r.summary, /求通过/)
   assert.match(r.summary, /ZZZ999/)
+})
+
+test('GET /installed returns a plugin list (possibly empty) and rejects POST', async () => {
+  const { routes } = mountHost()
+  const res = await callRoute(routes, '/dsh-friends/installed')
+  assert.equal(res.status, 200)
+  const body = res.json()
+  assert.ok(Array.isArray(body.plugins), 'plugins is an array')
+  // 每一项都必须是 {name, version} 形状，前端才能直接渲染
+  for (const p of body.plugins) {
+    assert.equal(typeof p.name, 'string')
+    assert.equal(typeof p.version, 'string')
+  }
+  const bad = await callRoute(routes, '/dsh-friends/installed', { method: 'POST' })
+  assert.equal(bad.status, 405)
 })
