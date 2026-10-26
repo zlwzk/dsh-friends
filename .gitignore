@@ -3,3 +3,9 @@ node_modules/
 .artifacts/
 *.log
 .DS_Store
+
+# 渲染测试暂存/缓存（由 test/render-check.mjs 生成）
+test/client.js
+test/react.js
+test/react-dom.js
+test/.render-probe.mjs
