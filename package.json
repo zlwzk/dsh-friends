@@ -1,0 +1,81 @@
+{
+  "name": "dsh-friends",
+  "version": "0.1.0",
+  "description": "DSH 鲸友好友系统:和同样在用 DeepSeek Harness 的好友互相在线/任务状态可见,可改趣味签名、戳一戳、AI 代签。端到端加密、零服务器、零登录的人机混合社交。",
+  "keywords": [
+    "dsh",
+    "dsh-plugin",
+    "deepseek-harness",
+    "friends",
+    "presence",
+    "social",
+    "mqtt",
+    "fun"
+  ],
+  "author": "zlwzk",
+  "license": "MIT",
+  "type": "module",
+  "main": "./lib/index.js",
+  "icon": "./assets/icon.svg",
+  "exports": {
+    ".": "./lib/index.js",
+    "./client": "./lib/client.js",
+    "./cordis.patch.yml": "./cordis.patch.yml",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "lib/index.js",
+    "lib/client.js",
+    "assets/icon.svg",
+    "cordis.patch.yml",
+    "package.json",
+    "README.md",
+    "README.en.md",
+    "LICENSE"
+  ],
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web",
+      "inject": [
+        "@deepseek-ai/dsh-client-ui-primitives"
+      ]
+    }
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/zlwzk/dsh-friends.git"
+  },
+  "publishConfig": {
+    "access": "public",
+    "tag": "latest"
+  },
+  "engines": {
+    "node": "^22.19.0 || >=24.0.0"
+  },
+  "peerDependencies": {
+    "@deepseek-ai/cordis": "4.0.1 || 4.0.2 || 4.0.3 || 4.0.4 || 4.0.5-alpha.1 || 4.0.5-alpha.2 || 4.0.5"
+  },
+  "peerDependenciesMeta": {
+    "@deepseek-ai/cordis": {
+      "optional": true
+    }
+  },
+  "directories": {
+    "lib": "lib",
+    "test": "test"
+  },
+  "scripts": {
+    "test": "node --test test/*.test.mjs",
+    "test:smoke": "node test/client-smoke.mjs"
+  },
+  "bugs": {
+    "url": "https://github.com/zlwzk/dsh-friends/issues"
+  },
+  "homepage": "https://github.com/zlwzk/dsh-friends#readme",
+  "devDependencies": {
+    "ws": "^8.22.0"
+  }
+}
