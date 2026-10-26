@@ -7,6 +7,14 @@
   :root { color-scheme: dark; }
   html, body { margin: 0; height: 100%; background: #11151c; color: #e8eaed;
     font: 13px/1.5 system-ui, "Segoe UI", "Microsoft YaHei", sans-serif; }
+  /* 测试运行时（ego-linux）不带 emoji 字体；显式挂上 Windows 的 Segoe UI Emoji，
+     让渲染截图里的 emoji 与真实 DSH（Windows Chrome/Electron）一致。 */
+  @font-face {
+    font-family: 'TestEmoji';
+    src: url('file:///C:/Windows/Fonts/seguiemj.ttf') format('truetype');
+    font-display: block;
+  }
+  .dshf-wrap { font-family: 'TestEmoji', system-ui, "Segoe UI", "Microsoft YaHei", sans-serif; }
   #panel { width: 360px; height: 640px; }
 </style>
 </head>
