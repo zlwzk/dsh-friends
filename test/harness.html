@@ -73,16 +73,33 @@ const mockProfile = {
   signature: '今天我的 AI 又把 rm -rf 写对了，幸好我拦住了。',
   mood: '🐳',
   code: 'K7M2QX',
+  acceptMode: 'approve',
+  stealth: false,
   friends: [
-    { code: 'ABC234', alias: '阿改' },
-    { code: 'ZZZ999', alias: '' },
-    { code: 'QQQ888', alias: '深夜赶稿人' },
-    { code: 'M4K8PD', alias: '隔壁工位' },
+    { code: 'ABC234', alias: '阿改', addedAt: Date.now() - 86400000 * 3 },
+    { code: 'ZZZ999', alias: '', addedAt: Date.now() - 86400000 },
+    { code: 'QQQ888', alias: '深夜赶稿人', addedAt: Date.now() - 3600000 * 5 },
+    { code: 'M4K8PD', alias: '隔壁工位', addedAt: Date.now() - 60000 },
   ],
+  requests: {
+    incoming: [
+      { code: 'PQ7R3T', fromNickname: '老王', message: '我是老王，加个鲸友', ts: Date.now() - 600000 },
+    ],
+    outgoing: [
+      { code: 'W5X8YZ', message: '在论坛看到你的插件，交个朋友', ts: Date.now() - 1800000 },
+    ],
+  },
   task: { active: true, error: false, label: '正在重构插件', startedAt: Date.now() },
 }
 window.fetch = async (url, opts = {}) => {
   log('fetch', url, opts.method || 'GET')
+  // 记录所有写入，便于定位"requests 被谁清空"这类问题
+  window.__postLog = window.__postLog || []
+  if (opts.method === 'POST') {
+    let body = null
+    try { body = JSON.parse(opts.body) } catch (e) { body = String(opts.body) }
+    window.__postLog.push({ url, body })
+  }
   if (url.endsWith('/dsh-friends/state')) return { ok: true, json: async () => mockProfile }
   if (url.endsWith('/dsh-friends/profile') && opts.method === 'POST') {
     Object.assign(mockProfile, JSON.parse(opts.body))
@@ -92,6 +109,17 @@ window.fetch = async (url, opts = {}) => {
     return { ok: true, json: async () => ({ ok: true, friends: mockProfile.friends }) }
   }
   return { ok: false, status: 404, json: async () => ({}) }
+}
+
+// 把在线好友的状态塞进 store 的实时层，让截图有"在线/忙碌/离线"的层次
+window.__seedLive = (store) => {
+  if (!store || !store.state) return
+  const f = store.state.friends
+  const seed = (code, patch) => { const x = f.get(code); if (x) Object.assign(x, patch) }
+  seed('ABC234', { online: true, status: 'busy', label: '跑一个长任务', nickname: '阿改', signature: '别戳，在 debug。', mood: '🛠', lastSeen: Date.now() })
+  seed('QQQ888', { online: true, status: 'online', nickname: '深夜赶稿人', signature: '凌晨三点的 DSH 最好用', mood: '🌙', lastSeen: Date.now() })
+  seed('M4K8PD', { online: true, status: 'error', label: '构建挂了', nickname: '隔壁工位', signature: '谁来救救我', mood: '😵', lastSeen: Date.now() })
+  seed('ZZZ999', { online: false, nickname: 'ZZZ999', lastSeen: Date.now() - 3600000 * 2 })
 }
 
 // ---- 假 __ModuleLoader__ ----
@@ -105,6 +133,35 @@ window.__ModuleLoader__ = {
     modules[id] = factory(require)
   },
 }
+
+// ---- 假的 WebSocket：让 client 以为自己连上了公共 broker，但不产生真实流量。
+// 公共 broker 上可能有其他人用同一个好友码测试，会意外改写面板状态；离线假连接
+// 让渲染测试完全确定。真实连通性由 test/relay.test.mjs 单独覆盖。
+const REAL_WS = window.WebSocket
+function FakeWS(url, protocols) {
+  this.url = url
+  this.readyState = 0
+  this.binaryType = 'blob'
+  const self = this
+  setTimeout(() => {
+    self.readyState = 1
+    self.onopen && self.onopen()
+    // CONNECT -> CONNACK (rc=0)
+    self.onmessage && self.onmessage({ data: new Uint8Array([0x20, 0x02, 0x00, 0x00]).buffer })
+  }, 30)
+}
+FakeWS.prototype.send = function (data) {
+  // 只响应 PINGREQ，其余静默丢弃（qos0，无需回执）
+  try {
+    const u = new Uint8Array(data)
+    if ((u[0] >> 4) === 12) {
+      this.onmessage && this.onmessage({ data: new Uint8Array([0xd0, 0x00]).buffer })
+    }
+  } catch (e) { /* ignore */ }
+}
+FakeWS.prototype.close = function () { this.readyState = 3; this.onclose && this.onclose({ code: 1000 }) }
+FakeWS.CONNECTING = 0; FakeWS.OPEN = 1; FakeWS.CLOSING = 2; FakeWS.CLOSED = 3
+window.WebSocket = FakeWS
 
 // ---- 假 slots ctx ----
 // effect(fn, label)：立即执行 fn 拿到 disposer 并保存，页面卸载时才调用。
@@ -149,6 +206,17 @@ const fakeCtx = {
   } catch (e) {
     log('apply FAILED: ' + (e && e.stack || e))
   }
+  // 持续把在线好友状态灌进实时层（截图/渲染验证用）。
+  // 之所以持续而不是只灌一次：store.init 的异步 reconcile 与面板重挂都可能替换
+  // friends Map 里的对象，只灌一次会被后来者覆盖。真实连通性由 relay.test.mjs 覆盖。
+  let seeded = false
+  const seedTimer = setInterval(() => {
+    const store = window.__dshfStore
+    if (store && store.state && store.state.me && store.state.friends.size >= 4) {
+      window.__seedLive(store)
+      if (!seeded) { seeded = true; log('seed: live states injected') }
+    }
+  }, 250)
 </script>
 </body>
 </html>

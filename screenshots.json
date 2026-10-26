@@ -2,7 +2,7 @@
   "screenshots": [
     {
       "path": "assets/screenshots/panel-dark.png",
-      "alt": "鲸友面板（深色主题）：我的资料卡、好友码、任务状态与好友列表",
+      "alt": "鲸友面板（深色主题）：资料卡、好友码、待处理好友申请、已发出申请与好友列表",
       "primary": true
     },
     {

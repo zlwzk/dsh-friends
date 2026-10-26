@@ -64,10 +64,10 @@ async function callRoute(routes, path, { method = 'GET', body } = {}) {
   return { status: response.statusCode, json: () => JSON.parse(response.payload || '{}'), raw: response.payload }
 }
 
-test('mount registers three tools and three routes', () => {
+test('mount registers four tools and three routes', () => {
   const { routes, tools, dispose } = mountHost()
   const names = tools.map((t) => t.name).sort()
-  assert.deepEqual(names, ['friend_profile', 'friend_sign_idea', 'friend_task'])
+  assert.deepEqual(names, ['friend_inbox', 'friend_profile', 'friend_sign_idea', 'friend_task'])
   assert.deepEqual([...routes.keys()].sort(), ['/dsh-friends/friends', '/dsh-friends/profile', '/dsh-friends/state'])
   assert.equal(typeof dispose, 'function')
   dispose()
@@ -181,4 +181,107 @@ test('profile survives a corrupt file', async () => {
   // 备份文件存在（.corrupt-<timestamp>）
   const backups = readdirSync(DATA).filter((n) => n.startsWith('profile.json.corrupt-'))
   assert.ok(backups.length >= 1, 'corrupt file backed up: ' + backups.join(','))
+})
+
+// ---------------------------------------------------------------- 好友申请系统
+
+test('acceptMode and stealth persist through /state and /profile', async () => {
+  const { routes } = mountHost()
+  // 默认：需要同意、不隐身
+  let s = (await callRoute(routes, '/dsh-friends/state')).json()
+  assert.equal(s.acceptMode, 'approve')
+  assert.equal(s.stealth, false)
+
+  // 切成「无需同意」+ 隐身
+  await callRoute(routes, '/dsh-friends/profile', { method: 'POST', body: { acceptMode: 'auto', stealth: true } })
+  s = (await callRoute(routes, '/dsh-friends/state')).json()
+  assert.equal(s.acceptMode, 'auto')
+  assert.equal(s.stealth, true)
+
+  // 落盘验证（重启后仍在）
+  const disk = JSON.parse(readFileSync(join(DATA, 'profile.json'), 'utf8'))
+  assert.equal(disk.acceptMode, 'auto')
+  assert.equal(disk.stealth, true)
+
+  // 非法 acceptMode 被忽略
+  await callRoute(routes, '/dsh-friends/profile', { method: 'POST', body: { acceptMode: 'nonsense' } })
+  s = (await callRoute(routes, '/dsh-friends/state')).json()
+  assert.equal(s.acceptMode, 'auto')
+})
+
+test('friend requests persist and reject invalid codes', async () => {
+  const { routes } = mountHost()
+  await callRoute(routes, '/dsh-friends/profile', {
+    method: 'POST',
+    body: {
+      requests: {
+        incoming: [
+          { code: 'ABC234', fromNickname: '阿改', message: '求通过', ts: 111 },
+          { code: 'BAD0I1', fromNickname: '坏码', ts: 222 }, // 应被丢弃
+        ],
+        outgoing: [{ code: 'ZZZ999', message: '加个好友', ts: 333 }],
+      },
+    },
+  })
+  const s = (await callRoute(routes, '/dsh-friends/state')).json()
+  assert.equal(s.requests.incoming.length, 1)
+  assert.equal(s.requests.incoming[0].code, 'ABC234')
+  assert.equal(s.requests.incoming[0].fromNickname, '阿改')
+  assert.equal(s.requests.incoming[0].message, '求通过')
+  assert.equal(s.requests.outgoing.length, 1)
+  assert.equal(s.requests.outgoing[0].code, 'ZZZ999')
+
+  // 落盘验证
+  const disk = JSON.parse(readFileSync(join(DATA, 'profile.json'), 'utf8'))
+  assert.equal(disk.requests.incoming.length, 1)
+})
+
+test('friends keep alias and addedAt, drop invalid entries', async () => {
+  const { routes } = mountHost()
+  await callRoute(routes, '/dsh-friends/friends', {
+    method: 'POST',
+    body: {
+      friends: [
+        { code: 'abc234', alias: '小A', addedAt: 1700000000000 },
+        { code: 'ZZZ999' },
+        { code: 'NOPE' },
+        { alias: '没有码' },
+      ],
+    },
+  })
+  const s = (await callRoute(routes, '/dsh-friends/state')).json()
+  assert.equal(s.friends.length, 2)
+  const a = s.friends.find((f) => f.code === 'ABC234')
+  assert.equal(a.alias, '小A')
+  assert.equal(a.addedAt, 1700000000000)
+  // 没传 addedAt 的会补一个当前时间
+  const b = s.friends.find((f) => f.code === 'ZZZ999')
+  assert.ok(b.addedAt > 0)
+})
+
+test('friend_inbox tool summarises pending requests', async () => {
+  const { tools } = mountHost()
+  const inbox = tools.find((t) => t.name === 'friend_inbox')
+  // 先清空收件箱（测试共用同一个 DATA 目录，前面的用例可能留了数据）
+  await callRoute(mountHost().routes, '/dsh-friends/profile', {
+    method: 'POST', body: { requests: { incoming: [], outgoing: [] } },
+  })
+  let r = await inbox.execute({})
+  assert.equal(r.incoming, 0)
+  assert.equal(r.outgoing, 0)
+  assert.match(r.summary, /没有待处理/)
+
+  // 造两条请求（直接写文件，绕开 HTTP）
+  const { writeFileSync: wf } = await import('node:fs')
+  const cur = JSON.parse(readFileSync(join(DATA, 'profile.json'), 'utf8'))
+  cur.requests.incoming.push({ code: 'ABC234', fromNickname: '阿改', message: '求通过', ts: 111 })
+  cur.requests.outgoing.push({ code: 'ZZZ999', message: '加个好友', ts: 222 })
+  wf(join(DATA, 'profile.json'), JSON.stringify(cur), 'utf8')
+
+  r = await inbox.execute({})
+  assert.equal(r.incoming, 1)
+  assert.equal(r.outgoing, 1)
+  assert.match(r.summary, /阿改/)
+  assert.match(r.summary, /求通过/)
+  assert.match(r.summary, /ZZZ999/)
 })

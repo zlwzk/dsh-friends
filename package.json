@@ -1,7 +1,7 @@
 {
   "name": "dsh-friends",
-  "version": "0.2.0",
-  "description": "DSH 鲸友好友系统:和同样在用 DeepSeek Harness 的好友互相在线/任务状态可见,可改趣味签名、戳一戳、AI 代签。端到端加密、零服务器、零登录的人机混合社交。",
+  "version": "0.3.0",
+  "description": "DSH 鲸友好友系统:好友申请(需同意/无需同意)、邀请链接、在线与任务状态、个性签名、戳一戳、备注、隐身、AI 工具。端到端加密、零服务器、零登录的人机混合社交。",
   "keywords": [
     "dsh",
     "dsh-plugin",
