@@ -6,6 +6,12 @@
 
 ![category](https://img.shields.io/badge/category-fun-blue) ![license](https://img.shields.io/badge/license-MIT-green)
 
+## 📸 截图
+
+| 深色主题 | 浅色主题 |
+| --- | --- |
+| ![深色主题](assets/screenshots/panel-dark.png) | ![浅色主题](assets/screenshots/panel-light.png) |
+
 ---
 
 ## ✨ 功能
@@ -65,10 +71,10 @@ dsh plugin --profile web add dsh-friends
 
 ## ⚠️ 已知限制
 
-- **暂无截图**：面板只在浏览器渲染 harness 里验证过（布局、文字、交互逻辑正确），但作者还没能在真实桌面应用里抓到图，所以不上传一张"看起来像"的图。`screenshots.json` 会等有真实截图后再加。
 - 公共 broker 是免费社区服务，不保证 SLA；高峰期可能延迟（已做多节点探测与重连）
 - 状态广播间隔 8 秒，不是毫秒级
 - 好友双方至少一方要开着 DSH 网页/桌面端才能互见
+- 截图来自渲染 harness（真实 client.js + 真实 React 渲染，主题走宿主同一条 `data-ds-dark-theme` 路径），非桌面应用内实拍
 
 ## 📄 License
 

@@ -1,0 +1,13 @@
+{
+  "screenshots": [
+    {
+      "path": "assets/screenshots/panel-dark.png",
+      "alt": "鲸友面板（深色主题）：我的资料卡、好友码、任务状态与好友列表",
+      "primary": true
+    },
+    {
+      "path": "assets/screenshots/panel-light.png",
+      "alt": "鲸友面板（浅色主题）：同一面板在浅色模式下的样子"
+    }
+  ]
+}

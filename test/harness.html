@@ -4,22 +4,35 @@
 <meta charset="utf-8">
 <title>dsh-friends render harness</title>
 <style>
-  :root { color-scheme: dark; }
-  html, body { margin: 0; height: 100%; background: #11151c; color: #e8eaed;
-    font: 13px/1.5 system-ui, "Segoe UI", "Microsoft YaHei", sans-serif; }
-  /* 测试运行时（ego-linux）不带 emoji 字体；显式挂上 Windows 的 Segoe UI Emoji，
-     让渲染截图里的 emoji 与真实 DSH（Windows Chrome/Electron）一致。 */
+  /* 主题由 ?theme=light|dark 选择；默认深色。截图时页面只有面板，调试信息在面板外。 */
+  html, body { margin: 0; height: 100%; }
+  body {
+    font: 13px/1.5 system-ui, "Segoe UI", "Microsoft YaHei", sans-serif;
+    background: #0f1218; color: #f0f3f8;
+  }
+  body[data-theme="light"] { background: #eef1f6; color: #131720; }
+  /* 侧栏容器：模拟 DSH 左栏的观感 */
+  #rail { width: 240px; height: 100%; display: flex; flex-direction: column;
+    background: #161a21; border-right: 1px solid #333b4a; }
+  body[data-theme="light"] #rail { background: #ffffff; border-right-color: #d8dee8; }
+  #panel { flex: 1; min-height: 0; }
+  #log { position: fixed; left: 260px; top: 8px; width: 520px; max-height: 90vh; overflow: auto;
+    font: 11px/1.5 ui-monospace, Menlo, Consolas, monospace; white-space: pre-wrap;
+    color: #7ec699; opacity: .85; }
+  body[data-theme="light"] #log { color: #1a7f4b; }
+
+  /* ego-linux 运行时不带 emoji 字体；挂上 Windows 的 Segoe UI Emoji，
+     让截图里的 emoji 与真实 DSH（Windows Chrome/Electron）一致。 */
   @font-face {
     font-family: 'TestEmoji';
     src: url('file:///C:/Windows/Fonts/seguiemj.ttf') format('truetype');
     font-display: block;
   }
   .dshf-wrap { font-family: 'TestEmoji', system-ui, "Segoe UI", "Microsoft YaHei", sans-serif; }
-  #panel { width: 360px; height: 640px; }
 </style>
 </head>
 <body>
-<div id="panel"></div>
+<div id="rail"><div id="panel"></div></div>
 <div id="log"></div>
 
 <!-- React UMD（本地测试用；真实 DSH webview 由宿主提供） -->
@@ -27,6 +40,16 @@
 <script src="react-dom.js"></script>
 
 <script>
+// ?theme=light|dark 选择截图底色；dark 时同时给 body 打 data-ds-dark-theme，
+// 模拟 DSH 深色主题的真实路径（宿主就是靠这个属性通知插件的）。
+const theme = new URLSearchParams(location.search).get('theme') || 'dark'
+if (theme === 'light') {
+  document.body.dataset.theme = 'light'
+} else {
+  document.body.dataset.theme = 'dark'
+  document.body.dataset.dsDarkTheme = ''
+}
+
 const logEl = document.getElementById('log')
 const log = (...a) => { logEl.textContent += a.join(' ') + '\n'; console.log(...a) }
 
@@ -54,6 +77,7 @@ const mockProfile = {
     { code: 'ABC234', alias: '阿改' },
     { code: 'ZZZ999', alias: '' },
     { code: 'QQQ888', alias: '深夜赶稿人' },
+    { code: 'M4K8PD', alias: '隔壁工位' },
   ],
   task: { active: true, error: false, label: '正在重构插件', startedAt: Date.now() },
 }
@@ -83,8 +107,19 @@ window.__ModuleLoader__ = {
 }
 
 // ---- 假 slots ctx ----
+// effect(fn, label)：立即执行 fn 拿到 disposer 并保存，页面卸载时才调用。
+// 不能立刻调用 disposer——那会把刚注入的样式又删掉。
+const disposers = []
 const fakeCtx = {
-  effect(fn, label) { log('effect:', label); const d = fn(); if (typeof d === 'function') d() },
+  effect(fn, label) {
+    log('effect:', label)
+    try {
+      const d = fn()
+      if (typeof d === 'function') disposers.push(d)
+    } catch (e) {
+      log('effect FAILED: ' + ((e && e.stack) || e))
+    }
+  },
   slots: {
     inject(seat, cb) { log('slots.inject', seat); return cb() },
     register(desc, Component) {

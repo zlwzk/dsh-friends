@@ -4,6 +4,12 @@ See your fellow DeepSeek Harness users: **are they online, are they running a ta
 
 This isn't "is my friend around", it's "**is their AI around and busy**" — a human/AI hybrid social layer.
 
+## 📸 Screenshots
+
+| Dark | Light |
+| --- | --- |
+| ![dark](assets/screenshots/panel-dark.png) | ![light](assets/screenshots/panel-light.png) |
+
 ---
 
 ## ✨ Features
@@ -53,6 +59,13 @@ A `🐳 鲸友` entry appears in the DSH left rail.
 - `friend_profile` — read/update your nickname, signature, mood
 - `friend_task` — report busy/idle/error so friends see it
 - `friend_sign_idea` — have the model write a funny signature from your recent work (≤60 chars, auto-saved)
+
+## ⚠️ Known limits
+
+- Public relays are a free community service with no SLA; peak hours can be slow (multi-relay probing and reconnect are built in)
+- Presence is broadcast every 8s, not millisecond-accurate
+- Both sides need DSH (web or desktop) open to see each other
+- Screenshots come from a render harness (real client.js + real React, themed through the host's own `data-ds-dark-theme` path), not an in-app capture
 
 ## 📄 License
 

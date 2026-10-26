@@ -1,6 +1,6 @@
 {
   "name": "dsh-friends",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "DSH 鲸友好友系统:和同样在用 DeepSeek Harness 的好友互相在线/任务状态可见,可改趣味签名、戳一戳、AI 代签。端到端加密、零服务器、零登录的人机混合社交。",
   "keywords": [
     "dsh",
@@ -27,6 +27,9 @@
     "lib/index.js",
     "lib/client.js",
     "assets/icon.svg",
+    "assets/screenshots/panel-dark.png",
+    "assets/screenshots/panel-light.png",
+    "screenshots.json",
     "cordis.patch.yml",
     "package.json",
     "README.md",

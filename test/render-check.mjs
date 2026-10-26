@@ -48,12 +48,19 @@ if (!existsSync(CLI)) {
 }
 
 // 探针脚本：导航到 harness，等待，读回面板状态。写成文件避免命令行转义地狱。
+// 裸跑 ego-browser 没有 preamble（没有现成 page），所以这里先自行建 task space。
 const probe = `
 async function main() {
-  await page.goto('file:///PLUGIN_ROOT/test/harness.html', { waitUntil: 'load', timeout: 30000 })
+  let target = page
+  if (!target) {
+    const space = await taskSpaces.useOrCreate('dshf-render-check')
+    target = space.page
+  }
+  if (!target) { console.log('RENDER_STATE_JSON:' + JSON.stringify({ fatal: 'no page facade' })); return }
+  await target.goto('file:///PLUGIN_ROOT/test/harness.html', { waitUntil: 'load', timeout: 30000 })
     .catch((e) => console.log('goto_err: ' + e.message))
   await new Promise((r) => setTimeout(r, 3500))
-  const state = await page.evaluate(() => {
+  const state = await target.evaluate(() => {
     const p = document.getElementById('panel')
     const logText = (document.getElementById('log') || {}).textContent || ''
     return {
@@ -70,13 +77,26 @@ await main()
 `.replace(/PLUGIN_ROOT/g, pluginRoot.replace(/\\/g, '/'))
 
 // ego-browser 从 stdin 读脚本（heredoc），不接受文件路径参数。
+// Chrome 路径：优先 EGO_LINUX_CHROME（本机有 Chrome 就指过去）。
 let stdout = ''
+const childEnv = { ...process.env }
+if (!childEnv.EGO_LINUX_CHROME) {
+  for (const chrome of [
+    'C:/Program Files/Google/Chrome/Application/chrome.exe',
+    'C:/Program Files (x86)/Google/Chrome/Application/chrome.exe',
+    'C:/Program Files/Microsoft/Edge/Application/msedge.exe',
+    'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe',
+  ]) {
+    if (existsSync(chrome)) { childEnv.EGO_LINUX_CHROME = chrome; break }
+  }
+}
 try {
   stdout = execFileSync('node', [CLI], {
     input: probe,
     encoding: 'utf8',
     timeout: 90000,
     stdio: ['pipe', 'pipe', 'pipe'],
+    env: childEnv,
   })
 } catch (e) {
   console.log('render-check FAILED to run: ' + (e.message || e))
@@ -95,9 +115,12 @@ const state = JSON.parse(m[1])
 
 const failures = []
 if (state.panelLen < 500) failures.push('panel rendered almost nothing (len=' + state.panelLen + ')')
-for (const must of ['鲸友', '小鲸测试机', 'K7M2QX', '编辑资料', '添加好友', '好友 · 3', '端到端加密']) {
+for (const must of ['鲸友', '小鲸测试机', 'K7M2QX', '我的好友码', '编辑资料', '添加好友', '好友 · 4', '端到端加密']) {
   if (!state.panelText.includes(must)) failures.push('panel text missing: ' + must)
 }
+// 好友码必须作为可见文本出现在面板里（曾经只是个小徽章，用户看不见）
+const codeOccurrences = state.panelText.split('K7M2QX').length - 1
+if (codeOccurrences < 2) failures.push('friend code not prominent enough (occurrences=' + codeOccurrences + ')')
 for (const must of ['apply OK', 'main seat: render() called']) {
   if (!state.log.includes(must)) failures.push('log missing: ' + must)
 }
