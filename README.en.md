@@ -32,10 +32,21 @@ This isn't "is my friend around", it's "**is their AI around and busy**" — a h
 
 ## 🚀 Install
 
-```
-dsh plugin --profile web add dsh-friends```
+> ⚠️ Not on npm yet — use either command below (both verified).
 
-A `🐳 鲸友` entry appears in the DSH left rail.
+**Option 1: prebuilt tarball (recommended)**
+```
+dsh plugin --profile web add https://github.com/zlwzk/dsh-friends/releases/latest/download/dsh-friends.tgz
+```
+
+**Option 2: straight from GitHub**
+```
+dsh plugin --profile web add github:zlwzk/dsh-friends
+```
+
+Use `--profile desktop` for the desktop app. **Restart DSH** afterwards; a `🐳 鲸友` entry appears in the left rail.
+
+> Once the entry lands in the awesome-dsh-plugin marketplace you can also install it from the plugin market with no command.
 
 ## 🤝 Adding a friend
 

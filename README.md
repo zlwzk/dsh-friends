@@ -34,11 +34,21 @@
 
 ## 🚀 安装
 
+> ⚠️ 本插件**还没有发布到 npm**，请用下面任意一条命令（都实测可用）。
+
+**方式一：预构建包（推荐，最快）**
 ```
-dsh plugin --profile web add dsh-friends
+dsh plugin --profile web add https://github.com/zlwzk/dsh-friends/releases/latest/download/dsh-friends.tgz
 ```
 
-安装后 DSH 左侧栏会出现「🐳 鲸友」入口。
+**方式二：直接从 GitHub 源码装**
+```
+dsh plugin --profile web add github:zlwzk/dsh-friends
+```
+
+桌面版把 `--profile web` 换成 `--profile desktop`。装完**重启 DSH**，左侧栏会出现「🐳 鲸友」入口。
+
+> 等收录进 awesome-dsh-plugin 市场后，也可以在插件市场里一键安装（无需命令）。
 
 ## 🤝 怎么加好友
 
